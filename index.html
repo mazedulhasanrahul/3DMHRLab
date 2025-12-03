@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MHR Chemistry Academy - Ultimate 3D Lab</title>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0f172a;
+            overflow: hidden;
+        }
+        
+        .canvas-bg {
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #020617 100%);
+        }
+        /* Glassmorphism Utils */
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .glass-light {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        /* Animations */
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-enter {
+            animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        /* Scrollbar */
+        
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React; // --- Data: Complete HSC Collection --- const MOLECULES = [ // --- ALKANES & ORGANIC --- { id: 'methane', name: 'Methane', formula: 'CH₄', category: 'Organic', hybridization: 'sp³', angle: '109.5°',
+        shape: 'Tetrahedral', desc: 'The simplest organic compound. Main component of natural gas.', atoms: [{ elem: 'C', pos: [0, 0, 0], color: '#333', size: 0.6 }, { elem: 'H', pos: [0.6, 0.6, 0.6], color: '#eee', size: 0.3 }, { elem: 'H', pos: [-0.6,
+        -0.6, 0.6], color: '#eee', size: 0.3 }, { elem: 'H', pos: [-0.6, 0.6, -0.6], color: '#eee', size: 0.3 }, { elem: 'H', pos: [0.6, -0.6, -0.6], color: '#eee', size: 0.3 }], bonds: [[0, 1], [0, 2], [0, 3], [0, 4]] }, { id: 'ethene', name: 'Ethene',
+        formula: 'C₂H₄', category: 'Organic', hybridization: 'sp²', angle: '120°', shape: 'Trigonal Planar', desc: 'Used to ripen fruits artificially. Contains a carbon-carbon double bond.', atoms: [{ elem: 'C', pos: [-0.4, 0, 0], color: '#333', size:
+        0.6 }, { elem: 'C', pos: [0.4, 0, 0], color: '#333', size: 0.6 }, { elem: 'H', pos: [-0.9, 0.9, 0], color: '#eee', size: 0.3 }, { elem: 'H', pos: [-0.9, -0.9, 0], color: '#eee', size: 0.3 }, { elem: 'H', pos: [0.9, 0.9, 0], color: '#eee', size:
+        0.3 }, { elem: 'H', pos: [0.9, -0.9, 0], color: '#eee', size: 0.3 }], bonds: [[0, 1], [0, 1], [0, 2], [0, 3], [1, 4], [1, 5]] }, { id: 'ethyne', name: 'Ethyne', formula: 'C₂H₂', category: 'Organic', hybridization: 'sp', angle: '180°', shape: 'Linear',
+        desc: 'Also known as Acetylene. Used in welding torches due to high combustion temp.', atoms: [ { elem: 'C', pos: [-0.35,0,0], color: '#333', size: 0.58 }, { elem: 'C', pos: [0.35,0,0], color: '#333', size: 0.58 }, { elem: 'H', pos: [-1.1,0,0],
+        color: '#eee', size: 0.3 }, { elem: 'H', pos: [1.1, 0, 0], color: '#eee', size: 0.3 } ], bonds: [[0, 1], [0, 1], [0, 1], [0, 2], [1, 3]] // Triple bond visual hack }, { id: 'benzene', name: 'Benzene', formula: 'C₆H₆', category: 'Organic', hybridization:
+        'sp²', angle: '120°', shape: 'Hexagonal Planar', desc: 'A cyclic aromatic hydrocarbon.The parent compound of aromatic chemistry.', atoms: [ { elem: 'C', pos: [1.4,0,0], color: '#333', size: 0.5 }, { elem: 'C', pos: [0.7,1.21,0], color: '#333',
+        size: 0.5 }, { elem: 'C', pos: [-0.7,1.21,0], color: '#333', size: 0.5 }, { elem: 'C', pos: [-1.4, 0, 0], color: '#333', size: 0.5 }, { elem: 'C', pos: [-0.7, -1.21, 0], color: '#333', size: 0.5 }, { elem: 'C', pos: [0.7, -1.21, 0], color: '#333',
+        size: 0.5 }, { elem: 'H', pos: [2.4, 0, 0], color: '#eee', size: 0.25 }, { elem: 'H', pos: [1.2, 2.08, 0], color: '#eee', size: 0.25 }, { elem: 'H', pos: [-1.2, 2.08, 0], color: '#eee', size: 0.25 }, { elem: 'H', pos: [-2.4, 0, 0], color: '#eee',
+        size: 0.25 }, { elem: 'H', pos: [-1.2, -2.08, 0], color: '#eee', size: 0.25 }, { elem: 'H', pos: [1.2, -2.08, 0], color: '#eee', size: 0.25 } ], bonds: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0], [0, 6], [1, 7], [2, 8], [3, 9], [4, 10], [5,
+        11]] }, { id: 'methanol', name: 'Methanol', formula: 'CH₃OH', category: 'Organic', hybridization: 'sp³', angle: '108.9°', shape: 'Tetrahedral/Bent', desc: 'Wood alcohol. The simplest alcohol. Toxic if consumed.', atoms: [{ elem: 'C', pos: [-0.4,
+        0, 0], color: '#333', size: 0.6 }, { elem: 'O', pos: [0.6, 0.2, 0], color: '#e11d48', size: 0.55 }, { elem: 'H', pos: [1.2, -0.4, 0], color: '#eee', size: 0.25 }, // H on O { elem: 'H', pos: [-0.6,0.9,0.3], color: '#eee', size: 0.3 }, { elem:
+        'H', pos: [-0.6,-0.8,0.3], color: '#eee', size: 0.3 }, { elem: 'H', pos: [-0.6,0,-0.9], color: '#eee', size: 0.3 } ], bonds: [[0, 1], [1, 2], [0, 3], [0, 4], [0, 5]] }, // --- INORGANIC & COMPLEX --- { id: 'water', name: 'Water', formula: 'H₂O',
+        category: 'Inorganic', hybridization: 'sp³', angle: '104.5°', shape: 'V-Shape / Bent', desc: 'The universal solvent. Bent due to 2 lone pairs on Oxygen.', atoms: [{ elem: 'O', pos: [0, 0, 0.1], color: '#e11d48', size: 0.6 }, { elem: 'H', pos:
+        [0.7, 0.5, -0.1], color: '#eee', size: 0.3 }, { elem: 'H', pos: [-0.7, 0.5, -0.1], color: '#eee', size: 0.3 }], bonds: [[0, 1], [0, 2]] }, { id: 'ammonia', name: 'Ammonia', formula: 'NH₃', category: 'Inorganic', hybridization: 'sp³', angle: '107°',
+        shape: 'Trigonal Pyramidal', desc: 'Has a pungent smell. Basic in nature due to one lone pair on Nitrogen.', atoms: [ { elem: 'N', pos: [0,0.1,0], color: '#2563eb', size: 0.6 }, { elem: 'H', pos: [0,-0.4,0.9], color: '#eee', size: 0.3 }, { elem:
+        'H', pos: [0.8,-0.4,-0.45], color: '#eee', size: 0.3 }, { elem: 'H', pos: [-0.8,-0.4,-0.45], color: '#eee', size: 0.3 } ], bonds: [[0, 1], [0, 2], [0, 3]] }, { id: 'pcl5', name: 'PCl₅', formula: 'PCl₅', category: 'Inorganic', hybridization: 'sp³d',
+        angle: '90° & 120°', shape: 'Trigonal Bipyramidal', desc: 'Classic example of expanded octet. Axial bonds are longer than equatorial.', atoms: [ { elem: 'P', pos: [0,0,0], color: '#d97706', size: 0.65 }, // Orange Phosphorus { elem: 'Cl', pos:
+        [0,1.8,0], color: '#10b981', size: 0.5 }, // Axial Top { elem: 'Cl', pos: [0,-1.8,0], color: '#10b981', size: 0.5 }, // Axial Bottom { elem: 'Cl', pos: [1.6,0,0], color: '#10b981', size: 0.5 }, // Eq 1 { elem: 'Cl', pos: [-0.8,0,1.4], color: '#10b981',
+        size: 0.5 }, // Eq 2 { elem: 'Cl', pos: [-0.8,0,-1.4], color: '#10b981', size: 0.5 }, // Eq 3 ], bonds: [[0,1], [0,2], [0,3], [0,4], [0,5]] }, { id: 'sf6', name: 'SF₆', formula: 'SF₆', category: 'Inorganic', hybridization: 'sp³d²', angle: '90°',
+        shape: 'Octahedral', desc: 'Sulfur Hexafluoride. Highly symmetrical and chemically inert gas.', atoms: [ { elem: 'S', pos: [0,0,0], color: '#fbbf24', size: 0.65 }, // Yellow Sulfur { elem: 'F', pos: [1.4,0,0], color: '#a3e635', size: 0.45 }, {
+        elem: 'F', pos: [-1.4,0,0], color: '#a3e635', size: 0.45 }, { elem: 'F', pos: [0,1.4,0], color: '#a3e635', size: 0.45 }, { elem: 'F', pos: [0, -1.4, 0], color: '#a3e635', size: 0.45 }, { elem: 'F', pos: [0, 0, 1.4], color: '#a3e635', size: 0.45
+        }, { elem: 'F', pos: [0, 0, -1.4], color: '#a3e635', size: 0.45 }, ], bonds: [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6]] } ]; // --- 3D Scene Component --- const MoleculeScene = ({ data, autoRotate }) => { const mountRef = useRef(null); const
+        sceneRef = useRef(null); const groupRef = useRef(null); useEffect(() => { const w = mountRef.current.clientWidth; const h = mountRef.current.clientHeight; // Scene Setup const scene = new THREE.Scene(); // No fog for crystal clear view, but maybe
+        ambient glow // Camera const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100); camera.position.set(0, 0, 8); // Start further back // Renderer const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true }); renderer.setSize(w,
+        h); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Performance opt renderer.outputEncoding = THREE.sRGBEncoding; mountRef.current.appendChild(renderer.domElement); // Controls const controls = new THREE.OrbitControls(camera,
+        renderer.domElement); controls.enableDamping = true; controls.dampingFactor = 0.05; controls.minDistance = 2; controls.maxDistance = 20; // Lighting (Studio Setup) const ambient = new THREE.AmbientLight(0xffffff, 0.4); scene.add(ambient); const
+        mainLight = new THREE.DirectionalLight(0xffffff, 1.2); mainLight.position.set(10, 10, 10); scene.add(mainLight); const fillLight = new THREE.PointLight(0x3b82f6, 0.8); // Blueish fill fillLight.position.set(-10, 0, -10); scene.add(fillLight);
+        const backLight = new THREE.PointLight(0xffffff, 0.5); backLight.position.set(0, -10, 5); scene.add(backLight); // Group const group = new THREE.Group(); groupRef.current = group; scene.add(group); // Animation const animate = () => { requestAnimationFrame(animate);
+        controls.update(); if (groupRef.current && autoRotate) { groupRef.current.rotation.y += 0.003; } renderer.render(scene, camera); }; animate(); // Resize const handleResize = () => { if (!mountRef.current) return; const newW = mountRef.current.clientWidth;
+        const newH = mountRef.current.clientHeight; camera.aspect = newW / newH; camera.updateProjectionMatrix(); renderer.setSize(newW, newH); }; window.addEventListener('resize', handleResize); return () => { window.removeEventListener('resize', handleResize);
+        if (mountRef.current) mountRef.current.innerHTML = ''; renderer.dispose(); }; }, []); // Data Update Effect useEffect(() => { if (!groupRef.current) return; const group = groupRef.current; // Clear old while(group.children.length > 0){ group.remove(group.children[0]);
+        } if (!data) return; // Add Atoms data.atoms.forEach(atom => { const geometry = new THREE.SphereGeometry(atom.size, 32, 32); const material = new THREE.MeshPhysicalMaterial({ color: atom.color, roughness: 0.3, metalness: 0.1, clearcoat: 0.8, clearcoatRoughness:
+        0.1 }); const sphere = new THREE.Mesh(geometry, material); sphere.position.set(...atom.pos); group.add(sphere); }); // Add Bonds data.bonds.forEach(([i, j]) => { const start = new THREE.Vector3(...data.atoms[i].pos); const end = new THREE.Vector3(...data.atoms[j].pos);
+        const direction = new THREE.Vector3().subVectors(end, start); const dist = direction.length(); // Cylinder const bondGeo = new THREE.CylinderGeometry(0.12, 0.12, dist, 12); const bondMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness:
+        0.4 }); const cylinder = new THREE.Mesh(bondGeo, bondMat); // Rotate and Position const axis = new THREE.Vector3(0, 1, 0); cylinder.quaternion.setFromUnitVectors(axis, direction.clone().normalize()); cylinder.position.copy(new THREE.Vector3().addVectors(start,
+        end).multiplyScalar(0.5)); group.add(cylinder); }); }, [data]); return
+        <div ref={mountRef} className="absolute inset-0 z-0" />; }; // --- UI Icons --- const Icon = ({ name }) => { if (name === 'menu') return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>;
+        if (name === 'close') return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>; if (name === 'rotate')
+        return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /></svg>;
+        if (name === 'info') return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>;
+        if (name === 'flask') return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v7.31" /><path d="M14 2v7.31" /><path d="M8.5 2h7" /><path d="M14 9.3a6.5 6.5 0 1 1-4 0" /><path d="M5.52 16h12.96" /></svg>;
+        return null; }; // --- Main App --- const App = () => { const [selectedId, setSelectedId] = useState('methane'); const [isMenuOpen, setIsMenuOpen] = useState(true); // Open by default on desktop? controlled via effect const [autoRotate, setAutoRotate]
+        = useState(true); const [showInfo, setShowInfo] = useState(true); const [category, setCategory] = useState('All'); // Responsive Init useEffect(() => { const isMobile = window.innerWidth
+        < 768; setIsMenuOpen(!isMobile); // Closed on mobile start, Open on desktop setShowInfo(!isMobile); }, []); const current=u seMemo(()=> MOLECULES.find(m => m.id === selectedId), [selectedId]); const filtered = useMemo(() => category === 'All' ? MOLECULES : MOLECULES.filter(m => m.category === category), [category]); return (
+            <div className="w-full h-screen relative flex flex-col md:flex-row text-white overflow-hidden canvas-bg">
+
+                {/* 3D Layer */}
+                <MoleculeScene data={current} autoRotate={autoRotate} /> {/* --- HEADER (Mobile Only Overlay) --- */}
+                <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20 md:hidden pointer-events-none">
+                    <div className="glass p-2 rounded-xl flex items-center gap-2 pointer-events-auto">
+                        <div className="bg-blue-600 p-1.5 rounded-lg">
+                            <Icon name="flask" />
+                        </div>
+                        <span className="font-bold text-sm">MHR Lab</span>
+                    </div>
+                    <button onClick={()=> setIsMenuOpen(true)}
+                        className="glass p-3 rounded-full pointer-events-auto active:scale-95 transition-transform"
+                    >
+                        <Icon name="menu" />
+                    </button>
+                </div>
+
+                {/* --- SIDEBAR (Desktop Fixed / Mobile Drawer) --- */}
+                <div className={` fixed inset-y-0 left-0 z-40 w-full md:w-80 bg-[#0f172a]/95 backdrop-blur-xl border-r border-white/10 shadow-2xl transform transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isMenuOpen ? 'translate-x-0' :
+                    '-translate-x-full'} `}>
+                    <div className="flex flex-col h-full">
+                        {/* Drawer Header */}
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-500/30">
+                                    <Icon name="flask" />
+                                </div>
+                                <div>
+                                    <h1 className="font-bold text-xl tracking-tight">MHR Academy</h1>
+                                    <p className="text-xs text-blue-400 font-medium tracking-wide">3D CHEMISTRY LAB</p>
+                                </div>
+                            </div>
+                            <button onClick={()=> setIsMenuOpen(false)}
+                                className="md:hidden p-2 text-white/50 hover:text-white"
+                            >
+                                <Icon name="close" />
+                            </button>
+                        </div>
+
+                        {/* Filters */}
+                        <div className="p-4 grid grid-cols-3 gap-2">
+                            {['All', 'Organic', 'Inorganic'].map(cat => (
+                            <button key={cat} onClick={()=> setCategory(cat)}
+                                    className={`
+                                            py-2 text-xs font-bold rounded-lg transition-all
+                                            ${category === cat
+                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
+                                            : 'bg-white/5 text-slate-400 hover:bg-white/10'}
+                                        `}
+                                >
+                                    {cat}
+                                </button>))}
+                        </div>
+
+                        {/* List */}
+                        <div className="flex-1 overflow-y-auto custom-scroll p-4 space-y-2">
+                            {filtered.map(mol => (
+                            <button key={mol.id} onClick={()=> {
+                                    setSelectedId(mol.id);
+                                    if (window.innerWidth < 768) setIsMenuOpen(false);
+                                    setShowInfo(true);
+                                }}
+                                    className={`
+                                            w-full text-left p-3 rounded-xl border transition-all duration-200 group relative overflow-hidden
+                                            ${selectedId === mol.id
+                                            ? 'bg-blue-600/20 border-blue-500/50 text-white'
+                                            : 'bg-white/5 border-transparent text-slate-400 hover:bg-white/10'}
+                                        `}
+                                >
+                                    <div className="relative z-10 flex justify-between items-center">
+                                        <div>
+                                            <div className={`font-semibold ${selectedId === mol.id ? 'text-blue-300' : 'text-slate-200'}`}>
+                                                {mol.name}
+                                            </div>
+                                            <div className="text-xs opacity-60">{mol.shape}</div>
+                                        </div>
+                                        <div className="font-mono text-xs bg-black/20 px-2 py-1 rounded text-white/80">
+                                            {mol.formula}
+                                        </div>
+                                    </div>
+                                </button>))}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 text-center border-t border-white/10">
+                            <p className="text-xs text-slate-500">
+                                Made for HSC Students <br />
+                                <span className="text-blue-500">© MHR Chemistry Academy</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* --- CONTROLS & INFO OVERLAY --- */}
+                <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-end md:justify-end md:items-end p-4 md:p-8">
+
+                    {/* Top Right Controls */}
+                    <div className="absolute top-4 right-4 pointer-events-auto flex gap-2">
+                        <button onClick={()=> setShowInfo(!showInfo)}
+                            className={`p-3 rounded-full glass transition-colors ${showInfo ? 'text-blue-400 bg-white/10' : 'text-white'}`}
+                        >
+                            <Icon name="info" />
+                        </button>
+                        <button onClick={()=> setAutoRotate(!autoRotate)}
+                            className={`p-3 rounded-full glass transition-colors ${autoRotate ? 'text-blue-400 bg-white/10' : 'text-white'}`}
+                        >
+                            <Icon name="rotate" />
+                        </button>
+                    </div>
+
+                    {/* Bottom Info Card */} {showInfo && (
+                    <div className="pointer-events-auto w-full md:w-96 animate-enter">
+                        <div className="glass-light p-6 rounded-2xl shadow-2xl text-slate-800 border-l-8 border-blue-600">
+                            <div className="flex justify-between items-start mb-3">
+                                <div>
+                                    <h2 className="text-3xl font-bold text-slate-900 leading-none">{current.name}</h2>
+                                    <span className="inline-block mt-2 px-2 py-1 bg-slate-200 text-slate-600 rounded font-mono text-sm font-bold">
+                                            {current.formula}
+                                        </span>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Hybridization</div>
+                                    <div className="text-2xl font-bold text-blue-600">{current.hybridization}</div>
+                                </div>
+                            </div>
+
+                            <div className="h-px bg-slate-200 my-4"></div>
+
+                            <p className="text-sm text-slate-600 mb-5 leading-relaxed font-medium">
+                                {current.desc}
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-slate-100 p-3 rounded-xl">
+                                    <div className="text-xs text-slate-500 font-bold uppercase mb-1">Bond Angle</div>
+                                    <div className="text-slate-800 font-bold">{current.angle}</div>
+                                </div>
+                                <div className="bg-slate-100 p-3 rounded-xl">
+                                    <div className="text-xs text-slate-500 font-bold uppercase mb-1">Shape</div>
+                                    <div className="text-slate-800 font-bold text-sm">{current.shape}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    )}
+                </div>
+
+            </div>
+            ); }; const root = ReactDOM.createRoot(document.getElementById('root')); root.render(
+            <App />);
+    </script>
+</body>
+
+</html>
